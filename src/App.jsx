@@ -822,7 +822,7 @@ export default function App() {
               <form onSubmit={handleAdminLogin} className="max-w-sm mx-auto py-12 space-y-4">
                 <h3 className="text-center font-bold text-lg">Admin Login</h3>
                 <p className="text-center text-xs text-zinc-400">
-  Enter password to manage portfolio thumbnails (Default: anas123)
+  Enter password to manage portfolio thumbnails
 </p>
 
                 <input
