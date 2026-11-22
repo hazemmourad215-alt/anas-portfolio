@@ -8,6 +8,7 @@ import {
   Lock,
   Plus,
   Trash2,
+  Pencil,
   Upload,
   X,
   Check,
@@ -24,14 +25,24 @@ import {
   MoveHorizontal,
   Star
 } from "lucide-react";
+
 import { designerInfo, initialThumbnails } from "./data/thumbnailsData";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
-const CATEGORIES = ["All", "Gaming", "Documentary", "Business", "Sports", "Entertainment"];
+const CATEGORIES = [
+  "All",
+  "Gaming",
+  "Documentary",
+  "Business",
+  "Sports",
+  "Entertainment",
+];
 
 export default function App() {
   const [thumbnails, setThumbnails] = useState(initialThumbnails);
@@ -40,19 +51,23 @@ export default function App() {
   const [ytDarkMode, setYtDarkMode] = useState(true);
   const [sliderPos, setSliderPos] = useState(50);
   const [copiedPhone, setCopiedPhone] = useState(false);
-    const [openFaq, setOpenFaq] = useState(0);
-
+  const [openFaq, setOpenFaq] = useState(0);
 
   // Admin States
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
+  const [loginError, setLoginError] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [editingItem, setEditingItem] = useState(null);
+
+
   const [uploading, setUploading] = useState(false);
 
   // Form States
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState("Gaming");
-  const [newStats, setNewStats] = useState("850K Views • 12.8% CTR");
+  const [newStats, setNewStats] = useState("Custom High-CTR Design");
   const [newFile, setNewFile] = useState(null);
 
   useEffect(() => {
@@ -76,20 +91,24 @@ export default function App() {
     setTimeout(() => setCopiedPhone(false), 2000);
   };
 
-  const handleAdminLogin = (e) => {
+    const handleAdminLogin = (e) => {
     e.preventDefault();
-    const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || "anas123";
-    if (passwordInput === adminPass) {
+    const adminPass = (import.meta.env.VITE_ADMIN_PASSWORD || "anas123").trim();
+    if (passwordInput.trim() === adminPass) {
       setIsAuthenticated(true);
+      setLoginError(false);
       setPasswordInput("");
     } else {
-      alert("كلمة المرور غير صحيحة!");
+      setLoginError(true);
     }
   };
 
+
   const handleAddThumbnail = async (e) => {
     e.preventDefault();
-    if (!newTitle) return alert("يرجى كتابة عنوان الصورة المصغرة");
+    if (!newTitle) return setToastMsg("✨ تم نشر التصميم الجديد في المعرض بنجاح!");
+      setTimeout(() => setToastMsg(""), 3500);
+
     setUploading(true);
 
     try {
@@ -122,13 +141,21 @@ export default function App() {
         category: newCategory,
         views_ctr: newStats,
         image_url: finalUrl,
-        featured: true
+        featured: true,
       };
 
       if (supabase) {
         const { data, error } = await supabase
           .from("thumbnails")
-          .insert([{ title: newTitle, category: newCategory, views_ctr: newStats, image_url: finalUrl, featured: true }])
+          .insert([
+            {
+              title: newTitle,
+              category: newCategory,
+              views_ctr: newStats,
+              image_url: finalUrl,
+              featured: true,
+            },
+          ])
           .select();
         if (error) throw error;
         if (data && data) newEntry.id = data.id;
@@ -152,23 +179,81 @@ export default function App() {
     }
     setThumbnails(thumbnails.filter((item) => item.id !== id));
   };
+    const handleUpdateThumbnail = async (e) => {
+    e.preventDefault();
+    if (!editingItem || !editingItem.title.trim()) return;
+    setUploading(true);
+
+    try {
+      let updatedUrl = editingItem.image_url;
+
+      if (editingItem.newFile && supabase) {
+        const fileExt = editingItem.newFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("thumbnails")
+          .upload(fileName, editingItem.newFile);
+        if (uploadError) throw uploadError;
+
+        const { data: publicData } = supabase.storage
+          .from("thumbnails")
+          .getPublicUrl(fileName);
+        updatedUrl = publicData.publicUrl;
+      } else if (editingItem.newFile) {
+        updatedUrl = URL.createObjectURL(editingItem.newFile);
+      }
+
+      if (supabase && editingItem.id.length > 10) {
+        const { error } = await supabase
+          .from("thumbnails")
+          .update({
+            title: editingItem.title,
+            category: editingItem.category,
+            image_url: updatedUrl
+          })
+          .eq("id", editingItem.id);
+        if (error) throw error;
+      }
+
+      setThumbnails(
+        thumbnails.map((item) =>
+          item.id === editingItem.id
+            ? { ...item, title: editingItem.title, category: editingItem.category, image_url: updatedUrl }
+            : item
+        )
+      );
+      setEditingItem(null);
+      setToastMsg("✨ تم تعديل التصميم بنجاح!");
+      setTimeout(() => setToastMsg(""), 3500);
+    } catch (err) {
+      alert("خطأ أثناء التعديل: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   const filteredThumbnails =
     selectedCategory === "All"
       ? thumbnails
       : thumbnails.filter((t) => t.category === selectedCategory);
 
-    const getWhatsappLink = (customMsg) => {
+  const getWhatsappLink = (customMsg) => {
     const params = new URLSearchParams();
     params.append("phone", "201507616211");
     params.append("text", customMsg);
     return "https://whatsapp.com?" + params.toString();
   };
 
-
-
-  return (
+    return (
     <div className="min-h-screen bg-[#050507] text-[#FAFAFA] font-sans selection:bg-[#FF0033] selection:text-white overflow-x-hidden">
+      {toastMsg && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2.5 bg-emerald-500 text-zinc-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-2xl shadow-emerald-500/40 animate-bounce">
+          <Check className="w-5 h-5" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       {/* Custom Marquee & Grid Styles */}
       <style>{`
         @keyframes marquee {
@@ -188,6 +273,7 @@ export default function App() {
                             linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
           background-size: 48px 48px;
         }
+
       `}</style>
 
       {/* Ambient Studio Lighting & Cyber Grid */}
@@ -210,16 +296,18 @@ export default function App() {
               <span className="font-black text-base sm:text-lg tracking-wider block leading-none">
                 ANAS <span className="text-[#FF0033]">SAYED</span>
               </span>
-              <span className="text-[10px] text-zinc-400 tracking-widest uppercase">
-                CTR Studio
-              </span>
             </div>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-zinc-400">
-            <a href="#portfolio" className="hover:text-white transition">Showcase</a>
-            <a href="#why-me" className="hover:text-white transition">CTR Secrets</a>
-            <a href="#packages" className="hover:text-white transition">Packages</a>
+            <a href="#portfolio" className="hover:text-white transition">
+              Showcase
+            </a>
+            <a href="#why-me" className="hover:text-white transition">
+              CTR Secrets
+            </a>
+            <a href="#contact" className="hover:text-white transition">Contact</a>
+
           </nav>
 
           <div className="flex items-center gap-2.5">
@@ -231,7 +319,9 @@ export default function App() {
               <Lock className="w-4 h-4" />
             </button>
             <a
-              href={getWhatsappLink("Hi Anas, I saw your portfolio and want to order a viral thumbnail!")}
+              href={getWhatsappLink(
+                "Hi Anas, I saw your portfolio and want to order a viral thumbnail!",
+              )}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-2 bg-gradient-to-r from-[#FF0033] to-rose-600 hover:from-rose-600 hover:to-[#FF0033] text-white text-xs sm:text-sm font-black px-5 py-2.5 rounded-xl shadow-lg shadow-[#FF0033]/30 transition transform hover:scale-105"
@@ -257,12 +347,17 @@ export default function App() {
         </h1>
 
         <p className="mt-6 text-zinc-400 text-base sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          Stop losing views to boring covers. I’m <strong className="text-white">Anas Sayed</strong> — crafting high-contrast, curiosity-driven YouTube thumbnails engineered for maximum CTR.
+          Stop losing views to boring covers. I’m{" "}
+          <strong className="text-white">Anas Sayed</strong> — crafting
+          high-contrast, curiosity-driven YouTube thumbnails engineered for
+          maximum CTR.
         </p>
 
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
           <a
-            href={getWhatsappLink("Hi Anas! I want to boost my channel CTR with custom thumbnails.")}
+            href={getWhatsappLink(
+              "Hi Anas! I want to boost my channel CTR with custom thumbnails.",
+            )}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-3 bg-gradient-to-r from-[#FF0033] to-rose-600 text-white font-black px-8 py-4 rounded-2xl shadow-2xl shadow-[#FF0033]/40 transition transform hover:-translate-y-1 text-sm sm:text-base"
@@ -302,11 +397,20 @@ export default function App() {
         <div className="animate-marquee flex items-center gap-10 text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-300">
           {[...Array(2)].map((_, loopIdx) => (
             <React.Fragment key={loopIdx}>
-              <span className="flex items-center gap-2"><Zap className="w-4 h-4 text-[#F59E0B]" /> EL-DAHEEH DOCUMENTARY STYLE</span>
+              <span className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#F59E0B]" /> EL-DAHEEH DOCUMENTARY
+                STYLE
+              </span>
               <span className="text-[#FF0033]">•</span>
-              <span className="flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#FF0033]" /> HIGH-CTR PSYCHOLOGY</span>
+              <span className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#FF0033]" /> HIGH-CTR
+                PSYCHOLOGY
+              </span>
               <span className="text-[#F59E0B]">•</span>
-              <span className="flex items-center gap-2"><Award className="w-4 h-4 text-[#F59E0B]" /> GAMING & HORROR MANIPULATION</span>
+              <span className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-[#F59E0B]" /> GAMING & HORROR
+                MANIPULATION
+              </span>
               <span className="text-[#FF0033]">•</span>
               <span>24-HOUR EXPRESS TURNAROUND</span>
               <span className="text-[#F59E0B]">•</span>
@@ -380,7 +484,7 @@ export default function App() {
                   </h3>
                   <div className="mt-2.5 flex items-center justify-between">
                     <span className="text-xs font-bold text-[#F59E0B]">
-                      {item.views_ctr || "High CTR Design"}
+                      High-CTR Custom Design
                     </span>
                     <span className="text-[11px] text-zinc-500 group-hover:text-zinc-300 transition">
                       Click to inspect →
@@ -408,18 +512,18 @@ export default function App() {
             {
               icon: <Zap className="w-6 h-6 text-[#FF0033]" />,
               title: "0.3-Second Hook Psychology",
-              desc: "Viewers scroll fast. Every thumbnail is engineered with strong focal contrast and emotional expressions that stop the thumb instantly."
+              desc: "Viewers scroll fast. Every thumbnail is engineered with strong focal contrast and emotional expressions that stop the thumb instantly.",
             },
             {
               icon: <TrendingUp className="w-6 h-6 text-[#F59E0B]" />,
               title: "Curiosity Gap Storytelling",
-              desc: "I never repeat the video title on the thumbnail—instead, I create a visual mystery that forces viewers to click to find the answer."
+              desc: "I never repeat the video title on the thumbnail—instead, I create a visual mystery that forces viewers to click to find the answer.",
             },
             {
               icon: <Award className="w-6 h-6 text-[#FF0033]" />,
               title: "Mobile-First Readability",
-              desc: "Over 75% of YouTube views happen on phones. Every element, face, and text is tested at small mobile sizes for crystal clarity."
-            }
+              desc: "Over 75% of YouTube views happen on phones. Every element, face, and text is tested at small mobile sizes for crystal clarity.",
+            },
           ].map((feat, idx) => (
             <div
               key={idx}
@@ -429,80 +533,21 @@ export default function App() {
                 {feat.icon}
               </div>
               <h3 className="text-xl font-black text-white">{feat.title}</h3>
-              <p className="text-zinc-400 text-sm mt-2.5 leading-relaxed">{feat.desc}</p>
+              <p className="text-zinc-400 text-sm mt-2.5 leading-relaxed">
+                {feat.desc}
+              </p>
             </div>
           ))}
         </div>
       </section>
-
-      {/* Packages Section */}
-      {/* Interactive Before & After CTR Transformation Slider */}
-      <section className="py-16 px-4 sm:px-6 max-w-5xl mx-auto">
-        <div className="text-center mb-10">
-          <span className="text-xs font-black uppercase tracking-widest text-[#FF0033]">
-            The Magic Behind High CTR
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black mt-1">
-            Drag to See the Transformation
-          </h2>
-          <p className="text-zinc-400 text-sm mt-2">
-            Slide left & right: Raw Unedited Photo vs. Anas Sayed's Viral Thumbnail
-          </p>
-        </div>
-
-        <div className="relative aspect-video rounded-3xl overflow-hidden border-2 border-white/15 shadow-2xl select-none bg-zinc-950">
-          {/* AFTER Image (Right Side - Full Final Thumbnail) */}
-          <img
-            src="/thumbnails/eldaheeh.jpg"
-            alt="After Anas Edit"
-            className="w-full h-full object-cover"
-          />
-          <span className="absolute top-4 right-4 z-10 px-3.5 py-1.5 rounded-full bg-[#FF0033] text-white text-xs font-black shadow-lg">
-            AFTER • 13.2% CTR
-          </span>
-
-          {/* BEFORE Image (Left Side - Clipped cleanly with clipPath so it never squishes) */}
-          <div
-            style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
-            className="absolute inset-0"
-          >
-            <img
-              src="/thumbnails/eldaheeh_before.jpg"
-              onError={(e) => {
-                e.currentTarget.src = "/thumbnails/eldaheeh.jpg";
-                e.currentTarget.style.filter = "grayscale(100%) contrast(70%) brightness(75%)";
-              }}
-              alt="Before Raw Photo"
-              className="w-full h-full object-cover"
-            />
-            <span className="absolute top-4 left-4 z-10 px-3.5 py-1.5 rounded-full bg-black/85 backdrop-blur-md text-zinc-200 text-xs font-bold border border-white/15">
-              BEFORE • RAW PHOTO
-            </span>
-          </div>
-
-          {/* Vertical Divider Line & Handle */}
-          <div
-            style={{ left: `${sliderPos}%` }}
-            className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)] pointer-events-none z-20"
-          >
-            <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white text-black shadow-2xl flex items-center justify-center border-4 border-[#FF0033]">
-              <MoveHorizontal className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Smooth Range Input */}
-          <input
-            type="range"
-            min="2"
-            max="98"
-            value={sliderPos}
-            onChange={(e) => setSliderPos(Number(e.target.value))}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
-            aria-label="Compare before and after"
-          />
-        </div>
-      </section>
-
+      <div className="text-center mb-10">
+        <span className="text-xs font-black uppercase tracking-widest text-[#F59E0B]">
+          Creator Feedback
+        </span>
+        <h2 className="text-3xl sm:text-4xl font-black mt-1">
+          What Creators Say About My Work
+        </h2>
+      </div>
 
       {/* Creator Testimonials */}
       <section className="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
@@ -510,16 +555,19 @@ export default function App() {
           {[
             {
               name: "Ahmed — Gaming Channel (450K)",
-              quote: "أنس حرفياً نقل القناة في حتة تانية! نسبة النقر (CTR) زادت من 5% لـ 12.8% في أول أسبوع شغل معاه."
+              quote:
+                "أنس حرفياً نقل القناة في حتة تانية! نسبة النقر (CTR) زادت من 5% لـ 12.8% في أول أسبوع شغل معاه.",
             },
             {
               name: "Karim — Documentary & Science",
-              quote: "بيفهم فكرة الفيديو بسرعة رهيبة وبيطلع ثامبنيل بأسلوب الدحيح يخطف العين من وسط آلاف الفيديوهات."
+              quote:
+                "بيفهم فكرة الفيديو بسرعة رهيبة وبيطلع ثامبنيل بأسلوب الدحيح يخطف العين من وسط آلاف الفيديوهات.",
             },
             {
               name: "Omar — Business & Tech",
-              quote: "التزام بالمواعيد، ألوان سينمائية نظيفة، وتجاوب سريع جداً على واتساب. أفضل مصمم تعاملت معاه."
-            }
+              quote:
+                "التزام بالمواعيد، ألوان سينمائية نظيفة، وتجاوب سريع جداً على واتساب. أفضل مصمم تعاملت معاه.",
+            },
           ].map((rev, idx) => (
             <div
               key={idx}
@@ -542,84 +590,8 @@ export default function App() {
           ))}
         </div>
       </section>
-            {/* Packages Section */}
-      <section id="packages" className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <span className="text-xs font-black uppercase tracking-widest text-[#FF0033]">
-            Ready to Scale?
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black mt-1">
-            Creator-Friendly Packages
-          </h2>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7 max-w-5xl mx-auto">
-          {[
-            {
-              name: "Single Viral Thumbnail",
-              desc: "Ideal for testing a single high-potential video",
-              features: ["1 Custom High-CTR Thumbnail", "24-Hour Express Delivery", "Full HD 1920x1080 Export", "Unlimited Minor Revisions"],
-              popular: false
-            },
-            {
-              name: "Creator Growth Pack (5x)",
-              desc: "Best value for consistent weekly uploads",
-              features: ["5 Custom Thumbnails", "A/B Testing Color Variants", "Priority 24h Delivery", "Consistent Channel Style"],
-              popular: true
-            },
-            {
-              name: "Monthly Channel Partner",
-              desc: "Your dedicated thumbnail studio",
-              features: ["15–20 Thumbnails / Month", "Direct WhatsApp VIP Line", "Title + Thumbnail Ideation", "Highest Priority Queue"],
-              popular: false
-            }
-          ].map((pkg, i) => (
-            <div
-              key={i}
-              className={`relative p-7 rounded-3xl border flex flex-col justify-between transition transform hover:-translate-y-1 ${
-                pkg.popular
-                  ? "bg-gradient-to-b from-[#FF0033]/20 via-[#121217] to-[#0B0B0F] border-[#FF0033] shadow-2xl shadow-[#FF0033]/20"
-                  : "bg-[#0D0D12] border-white/10"
-              }`}
-            >
-              <div>
-                {pkg.popular && (
-                  <span className="inline-block px-3.5 py-1 rounded-full bg-gradient-to-r from-[#FF0033] to-rose-600 text-[11px] font-black tracking-wider mb-4">
-                    MOST POPULAR
-                  </span>
-                )}
-                <h3 className="text-xl font-black">{pkg.name}</h3>
-                <p className="text-zinc-400 text-xs mt-1.5">{pkg.desc}</p>
-                <ul className="mt-6 space-y-3.5 text-sm text-zinc-300">
-                  {pkg.features.map((feat, idx) => (
-                    <li key={idx} className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#FF0033] shrink-0" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <a
-                href={getWhatsappLink(`Hi Anas! I want to order the "${pkg.name}" package.`)}
-                target="_blank"
-                rel="noreferrer"
-                className={`mt-8 w-full py-3.5 rounded-2xl font-black text-sm text-center transition flex items-center justify-center gap-2 ${
-                  pkg.popular
-                    ? "bg-gradient-to-r from-[#FF0033] to-rose-600 text-white shadow-lg shadow-[#FF0033]/30"
-                    : "bg-white/10 hover:bg-white/15 text-white"
-                }`}
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Order on WhatsApp</span>
-              </a>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-                {/* 4-Step Viral Workflow Section */}
+      {/* 4-Step Viral Workflow Section */}
       <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <span className="text-xs font-black uppercase tracking-widest text-[#F59E0B]">
@@ -632,27 +604,27 @@ export default function App() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-             {
+            {
               step: "01",
               title: "Send Video Idea",
-              desc: "Message me on WhatsApp with your video title, topic, and any raw photos."
+              desc: "Message me on WhatsApp with your video title, topic, and any raw photos.",
             },
 
             {
               step: "02",
               title: "CTR Concept & Hook",
-              desc: "We brainstorm a high-curiosity visual concept engineered to beat your competitors."
+              desc: "We brainstorm a high-curiosity visual concept engineered to beat your competitors.",
             },
             {
               step: "03",
               title: "Cinema-Grade Design",
-              desc: "3D lighting, expressive color grading, and mobile-tested typography in under 24h."
+              desc: "3D lighting, expressive color grading, and mobile-tested typography in under 24h.",
             },
             {
               step: "04",
               title: "Launch & Scale Views",
-              desc: "Receive your Full-HD thumbnail (plus A/B variants) and watch your CTR skyrocket."
-            }
+              desc: "Receive your Full-HD thumbnail (plus A/B variants) and watch your CTR skyrocket.",
+            },
           ].map((item, idx) => (
             <div
               key={idx}
@@ -661,8 +633,12 @@ export default function App() {
               <span className="text-5xl font-black text-white/5 group-hover:text-[#FF0033]/20 transition select-none">
                 {item.step}
               </span>
-              <h3 className="text-lg font-black text-white mt-2">{item.title}</h3>
-              <p className="text-zinc-400 text-xs leading-relaxed mt-2">{item.desc}</p>
+              <h3 className="text-lg font-black text-white mt-2">
+                {item.title}
+              </h3>
+              <p className="text-zinc-400 text-xs leading-relaxed mt-2">
+                {item.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -674,27 +650,29 @@ export default function App() {
           <span className="text-xs font-black uppercase tracking-widest text-[#FF0033]">
             Got Questions?
           </span>
-          <h2 className="text-3xl font-black mt-1">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-black mt-1">
+            Frequently Asked Questions
+          </h2>
         </div>
 
         <div className="space-y-3">
           {[
             {
               q: "How fast will I receive my thumbnail?",
-              a: "Standard delivery is within 24 hours. For urgent uploads or monthly partners, express delivery takes as little as 6–12 hours."
+              a: "Standard delivery is within 24 hours. For urgent uploads or monthly partners, express delivery takes as little as 6–12 hours.",
             },
             {
               q: "What if I want changes or revisions?",
-              a: "Every order includes unlimited minor revisions (colors, text tweaks, facial expressions) until you are 100% satisfied."
+              a: "Every order includes unlimited minor revisions (colors, text tweaks, facial expressions) until you are 100% satisfied.",
             },
             {
               q: "Do you provide A/B testing variations?",
-              a: "Yes! You can request color or text variations so you can use YouTube's Test & Compare feature to maximize your CTR."
+              a: "Yes! You can request color or text variations so you can use YouTube's Test & Compare feature to maximize your CTR.",
             },
             {
               q: "How do I pay and start an order?",
-              a: "Simply click any WhatsApp button on this page to message me directly. Payment is fast and easy via InstaPay."
-            }
+              a: "Simply click any WhatsApp button on this page to message me directly. Payment is fast and easy via InstaPay.",
+            },
           ].map((faq, idx) => (
             <div
               key={idx}
@@ -727,12 +705,15 @@ export default function App() {
               Ready to Make Your Next Video Go Viral?
             </h2>
             <p className="text-zinc-300 text-sm sm:text-base mt-4">
-              Don't let great content die with a weak thumbnail. Message me now and get your first high-CTR design within 24 hours.
+              Don't let great content die with a weak thumbnail. Message me now
+              and get your first high-CTR design within 24 hours.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <a
-                href={getWhatsappLink("Hi Anas! I'm ready to order my viral thumbnail now.")}
+                href={getWhatsappLink(
+                  "Hi Anas! I'm ready to order my viral thumbnail now.",
+                )}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-3 bg-gradient-to-r from-[#FF0033] to-rose-600 hover:from-rose-600 hover:to-[#FF0033] text-white font-black px-8 py-4 rounded-2xl shadow-2xl shadow-[#FF0033]/40 transition transform hover:scale-105"
@@ -746,14 +727,18 @@ export default function App() {
       </section>
 
       {/* Footer (No Twitter/X) */}
-      <footer id="contact" className="border-t border-white/10 bg-[#040406] py-12 px-4 sm:px-6">
+      <footer
+        id="contact"
+        className="border-t border-white/10 bg-[#040406] py-12 px-4 sm:px-6"
+      >
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <div className="font-black text-xl tracking-wider">
               ANAS <span className="text-[#FF0033]">SAYED</span>
             </div>
             <p className="text-zinc-400 text-sm mt-1">
-              YouTube Thumbnail Designer • WhatsApp: {designerInfo.whatsappNumber}
+              YouTube Thumbnail Designer • WhatsApp:{" "}
+              {designerInfo.whatsappNumber}
             </p>
           </div>
 
@@ -762,12 +747,20 @@ export default function App() {
               onClick={handleCopyPhone}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold transition"
             >
-              {copiedPhone ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copiedPhone ? "Copied!" : designerInfo.whatsappNumber}</span>
+              {copiedPhone ? (
+                <Check className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+              <span>
+                {copiedPhone ? "Copied!" : designerInfo.whatsappNumber}
+              </span>
             </button>
 
             <a
-              href={getWhatsappLink("Hi Anas, I want to work with you on my YouTube thumbnails!")}
+              href={getWhatsappLink(
+                "Hi Anas, I want to work with you on my YouTube thumbnails!",
+              )}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition shadow-lg shadow-emerald-600/20"
@@ -778,20 +771,21 @@ export default function App() {
           </div>
         </div>
       </footer>
-            {/* Floating WhatsApp Quick Action Button */}
+      {/* Floating WhatsApp Quick Action Button */}
       <a
-        href={getWhatsappLink("Hi Anas! I'm on your portfolio and want to order a thumbnail.")}
+        href={getWhatsappLink(
+          "Hi Anas! I'm on your portfolio and want to order a thumbnail.",
+        )}
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black px-5 py-3.5 rounded-full shadow-2xl shadow-emerald-500/40 transition transform hover:scale-105"
       >
         <MessageCircle className="w-5 h-5 fill-zinc-950" />
         <span className="text-xs sm:text-sm">Chat with Me</span>
-
       </a>
 
       {/* YouTube Feed Preview Lightbox Modal */}
-            {/* YouTube Feed Preview Lightbox Modal */}
+      {/* YouTube Feed Preview Lightbox Modal */}
       {previewItem && (
         <div
           onClick={() => setPreviewItem(null)}
@@ -814,7 +808,11 @@ export default function App() {
                   onClick={() => setYtDarkMode(!ytDarkMode)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-current/10 text-xs font-bold"
                 >
-                  {ytDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
+                  {ytDarkMode ? (
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  ) : (
+                    <Moon className="w-3.5 h-3.5" />
+                  )}
                   <span>{ytDarkMode ? "Light Mode" : "Dark Mode"}</span>
                 </button>
                 <button
@@ -845,13 +843,16 @@ export default function App() {
                       {previewItem.title}
                     </h3>
                     <p className="text-xs opacity-60 mt-1">
-                      Anas Sayed • {previewItem.views_ctr || "1.2M views"} • 2 hours ago
+                      Anas Sayed • {previewItem.views_ctr || "1.2M views"} • 2
+                      hours ago
                     </p>
                   </div>
                 </div>
 
                 <a
-                  href={getWhatsappLink(`Hi Anas! I want a thumbnail similar to "${previewItem.title}".`)}
+                  href={getWhatsappLink(
+                    `Hi Anas! I want a thumbnail similar to "${previewItem.title}".`,
+                  )}
                   target="_blank"
                   rel="noreferrer"
                   className="shrink-0 flex items-center gap-2 bg-[#FF0033] hover:bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#FF0033]/30"
@@ -865,7 +866,6 @@ export default function App() {
         </div>
       )}
 
-
       {/* Admin Dashboard Modal */}
       {isAdminOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-start justify-center p-4 overflow-y-auto">
@@ -873,7 +873,9 @@ export default function App() {
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-[#FF0033]" />
-                <h2 className="font-black text-lg">Anas Sayed — Thumbnail Manager</h2>
+                <h2 className="font-black text-lg">
+                  Anas Sayed — Thumbnail Manager
+                </h2>
               </div>
               <div className="flex items-center gap-2">
                 {isAuthenticated && (
@@ -895,11 +897,14 @@ export default function App() {
             </div>
 
             {!isAuthenticated ? (
-              <form onSubmit={handleAdminLogin} className="max-w-sm mx-auto py-12 space-y-4">
+              <form
+                onSubmit={handleAdminLogin}
+                className="max-w-sm mx-auto py-12 space-y-4"
+              >
                 <h3 className="text-center font-bold text-lg">Admin Login</h3>
                 <p className="text-center text-xs text-zinc-400">
-  Enter password to manage portfolio thumbnails
-</p>
+                  Enter password to manage portfolio thumbnails
+                </p>
 
                 <input
                   type="password"
@@ -908,6 +913,12 @@ export default function App() {
                   onChange={(e) => setPasswordInput(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-sm focus:border-[#FF0033] outline-none"
                 />
+                                {loginError && (
+                  <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold text-center">
+                    ⚠️ كلمة المرور غير صحيحة
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   className="w-full py-3 rounded-xl bg-[#FF0033] hover:bg-rose-600 font-bold text-sm transition"
@@ -917,6 +928,62 @@ export default function App() {
               </form>
             ) : (
               <div className="mt-6 space-y-8">
+                                {editingItem && (
+                  <form
+                    onSubmit={handleUpdateThumbnail}
+                    className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-[#F59E0B] flex items-center gap-2">
+                        <Pencil className="w-4 h-4" />
+                        تعديل التصميم الحالي
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditingItem(null)}
+                        className="text-xs text-zinc-400 hover:text-white"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <input
+                        type="text"
+                        value={editingItem.title}
+                        onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                        className="px-4 py-2.5 rounded-xl bg-[#121217] border border-white/10 text-sm outline-none focus:border-[#F59E0B]"
+                        required
+                      />
+                      <select
+                        value={editingItem.category}
+                        onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                        className="px-4 py-2.5 rounded-xl bg-[#121217] border border-white/10 text-sm outline-none focus:border-[#F59E0B]"
+                      >
+                        {CATEGORIES.filter((c) => c !== "All").map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#121217] border border-dashed border-white/25 hover:border-[#F59E0B] cursor-pointer text-xs text-zinc-300">
+                        <Upload className="w-4 h-4 text-[#F59E0B]" />
+                        <span>{editingItem.newFile ? editingItem.newFile.name : "تغيير الصورة (اختياري)"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setEditingItem({ ...editingItem, newFile: e.target.files?.[0] || null })}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="px-6 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-amber-400 text-zinc-950 font-black text-xs transition"
+                    >
+                      {uploading ? "جاري الحفظ..." : "حفظ التعديلات"}
+                    </button>
+                  </form>
+                )}
+
                 {/* Add New Form */}
                 <form
                   onSubmit={handleAddThumbnail}
@@ -946,20 +1013,17 @@ export default function App() {
                         </option>
                       ))}
                     </select>
-                    <input
-                      type="text"
-                      placeholder="Stats (e.g. 1.2M Views • 12.5% CTR)"
-                      value={newStats}
-                      onChange={(e) => setNewStats(e.target.value)}
-                      className="px-4 py-2.5 rounded-xl bg-[#121217] border border-white/10 text-sm outline-none focus:border-[#FF0033]"
-                    />
                     <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#121217] border border-dashed border-white/25 hover:border-[#FF0033] cursor-pointer text-xs text-zinc-300">
                       <Upload className="w-4 h-4 text-[#FF0033]" />
-                      <span>{newFile ? newFile.name : "Upload Image File (JPG/PNG)"}</span>
+                      <span>
+                        {newFile ? newFile.name : "Upload Image File (JPG/PNG)"}
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setNewFile(e.target.files?.[0] || null)}
+                        onChange={(e) =>
+                          setNewFile(e.target.files?.[0] || null)
+                        }
                         className="hidden"
                       />
                     </label>
@@ -990,16 +1054,31 @@ export default function App() {
                           className="w-20 h-12 object-cover rounded-lg shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold truncate">{item.title}</p>
-                          <p className="text-[10px] text-zinc-400">{item.category}</p>
+                          <p className="text-xs font-bold truncate">
+                            {item.title}
+                          </p>
+                          <p className="text-[10px] text-zinc-400">
+                            {item.category}
+                          </p>
                         </div>
-                        <button
-                          onClick={() => handleDeleteThumbnail(item.id)}
-                          className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 shrink-0"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => setEditingItem({ ...item, newFile: null })}
+                            className="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteThumbnail(item.id)}
+                            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+  
                       </div>
                     ))}
                   </div>

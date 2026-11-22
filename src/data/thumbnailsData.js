@@ -5,10 +5,10 @@ export const designerInfo = {
   whatsappNumber: "+20 1507616211",
   whatsappClean: "201507616211",
   stats: [
-    { label: "Views Generated", value: "+20M" },
-    { label: "Average CTR", value: "11.8%" },
-    { label: "Turnaround Time", value: "24 Hours" }
-  ]
+  { label: "Thumbnails Delivered", value: "+150" },
+  { label: "Design Quality", value: "4K HD" },
+  { label: "Turnaround Time", value: "24 Hours" }
+]
 };
 
 export const initialThumbnails = [
