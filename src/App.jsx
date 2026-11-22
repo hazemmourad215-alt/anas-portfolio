@@ -542,6 +542,82 @@ export default function App() {
           ))}
         </div>
       </section>
+            {/* Packages Section */}
+      <section id="packages" className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <span className="text-xs font-black uppercase tracking-widest text-[#FF0033]">
+            Ready to Scale?
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black mt-1">
+            Creator-Friendly Packages
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7 max-w-5xl mx-auto">
+          {[
+            {
+              name: "Single Viral Thumbnail",
+              desc: "Ideal for testing a single high-potential video",
+              features: ["1 Custom High-CTR Thumbnail", "24-Hour Express Delivery", "Full HD 1920x1080 Export", "Unlimited Minor Revisions"],
+              popular: false
+            },
+            {
+              name: "Creator Growth Pack (5x)",
+              desc: "Best value for consistent weekly uploads",
+              features: ["5 Custom Thumbnails", "A/B Testing Color Variants", "Priority 24h Delivery", "Consistent Channel Style"],
+              popular: true
+            },
+            {
+              name: "Monthly Channel Partner",
+              desc: "Your dedicated thumbnail studio",
+              features: ["15–20 Thumbnails / Month", "Direct WhatsApp VIP Line", "Title + Thumbnail Ideation", "Highest Priority Queue"],
+              popular: false
+            }
+          ].map((pkg, i) => (
+            <div
+              key={i}
+              className={`relative p-7 rounded-3xl border flex flex-col justify-between transition transform hover:-translate-y-1 ${
+                pkg.popular
+                  ? "bg-gradient-to-b from-[#FF0033]/20 via-[#121217] to-[#0B0B0F] border-[#FF0033] shadow-2xl shadow-[#FF0033]/20"
+                  : "bg-[#0D0D12] border-white/10"
+              }`}
+            >
+              <div>
+                {pkg.popular && (
+                  <span className="inline-block px-3.5 py-1 rounded-full bg-gradient-to-r from-[#FF0033] to-rose-600 text-[11px] font-black tracking-wider mb-4">
+                    MOST POPULAR
+                  </span>
+                )}
+                <h3 className="text-xl font-black">{pkg.name}</h3>
+                <p className="text-zinc-400 text-xs mt-1.5">{pkg.desc}</p>
+                <ul className="mt-6 space-y-3.5 text-sm text-zinc-300">
+                  {pkg.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#FF0033] shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <a
+                href={getWhatsappLink(`Hi Anas! I want to order the "${pkg.name}" package.`)}
+                target="_blank"
+                rel="noreferrer"
+                className={`mt-8 w-full py-3.5 rounded-2xl font-black text-sm text-center transition flex items-center justify-center gap-2 ${
+                  pkg.popular
+                    ? "bg-gradient-to-r from-[#FF0033] to-rose-600 text-white shadow-lg shadow-[#FF0033]/30"
+                    : "bg-white/10 hover:bg-white/15 text-white"
+                }`}
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Order on WhatsApp</span>
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
                 {/* 4-Step Viral Workflow Section */}
       <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
