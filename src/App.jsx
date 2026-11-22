@@ -792,7 +792,7 @@ export default function App() {
 
       {/* Admin Dashboard Modal */}
       {isAdminOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-[#121217] border border-white/15 rounded-3xl max-w-4xl w-full p-6 my-8 shadow-2xl">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -822,8 +822,9 @@ export default function App() {
               <form onSubmit={handleAdminLogin} className="max-w-sm mx-auto py-12 space-y-4">
                 <h3 className="text-center font-bold text-lg">Admin Login</h3>
                 <p className="text-center text-xs text-zinc-400">
-                  Enter password to manage portfolio thumbnails (Default: anas123)
-                </p>
+  Enter password to manage portfolio thumbnails (Default: anas123)
+</p>
+
                 <input
                   type="password"
                   placeholder="Enter Admin Password"
