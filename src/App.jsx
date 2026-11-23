@@ -60,8 +60,6 @@ export default function App() {
   const [loginError, setLoginError] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [editingItem, setEditingItem] = useState(null);
-
-
   const [uploading, setUploading] = useState(false);
 
   // Form States
@@ -91,7 +89,7 @@ export default function App() {
     setTimeout(() => setCopiedPhone(false), 2000);
   };
 
-    const handleAdminLogin = (e) => {
+  const handleAdminLogin = (e) => {
     e.preventDefault();
     const adminPass = (import.meta.env.VITE_ADMIN_PASSWORD || "anas123").trim();
     if (passwordInput.trim() === adminPass) {
@@ -103,11 +101,9 @@ export default function App() {
     }
   };
 
-
   const handleAddThumbnail = async (e) => {
     e.preventDefault();
-    if (!newTitle) return setToastMsg("✨ تم نشر التصميم الجديد في المعرض بنجاح!");
-      setTimeout(() => setToastMsg(""), 3500);
+    if (!newTitle.trim()) return alert("يرجى إدخال عنوان التصميم");
 
     setUploading(true);
 
@@ -158,13 +154,14 @@ export default function App() {
           ])
           .select();
         if (error) throw error;
-        if (data && data) newEntry.id = data.id;
+        if (data && data[0]) newEntry.id = data[0].id;
       }
 
       setThumbnails([newEntry, ...thumbnails]);
       setNewTitle("");
       setNewFile(null);
-      alert("تمت إضافة الصورة بنجاح!");
+      setToastMsg("✨ تم نشر التصميم الجديد في المعرض بنجاح!");
+      setTimeout(() => setToastMsg(""), 3500);
     } catch (err) {
       alert("خطأ: " + err.message);
     } finally {
@@ -179,7 +176,8 @@ export default function App() {
     }
     setThumbnails(thumbnails.filter((item) => item.id !== id));
   };
-    const handleUpdateThumbnail = async (e) => {
+
+  const handleUpdateThumbnail = async (e) => {
     e.preventDefault();
     if (!editingItem || !editingItem.title.trim()) return;
     setUploading(true);
@@ -209,7 +207,7 @@ export default function App() {
           .update({
             title: editingItem.title,
             category: editingItem.category,
-            image_url: updatedUrl
+            image_url: updatedUrl,
           })
           .eq("id", editingItem.id);
         if (error) throw error;
@@ -218,7 +216,12 @@ export default function App() {
       setThumbnails(
         thumbnails.map((item) =>
           item.id === editingItem.id
-            ? { ...item, title: editingItem.title, category: editingItem.category, image_url: updatedUrl }
+            ? {
+                ...item,
+                title: editingItem.title,
+                category: editingItem.category,
+                image_url: updatedUrl,
+              }
             : item
         )
       );
@@ -232,7 +235,6 @@ export default function App() {
     }
   };
 
-
   const filteredThumbnails =
     selectedCategory === "All"
       ? thumbnails
@@ -244,8 +246,7 @@ export default function App() {
     params.append("text", customMsg);
     return "https://whatsapp.com?" + params.toString();
   };
-
-    return (
+  return (
     <div className="min-h-screen bg-[#050507] text-[#FAFAFA] font-sans selection:bg-[#FF0033] selection:text-white overflow-x-hidden">
       {toastMsg && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2.5 bg-emerald-500 text-zinc-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-2xl shadow-emerald-500/40 animate-bounce">
@@ -273,7 +274,6 @@ export default function App() {
                             linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
           background-size: 48px 48px;
         }
-
       `}</style>
 
       {/* Ambient Studio Lighting & Cyber Grid */}
@@ -306,8 +306,9 @@ export default function App() {
             <a href="#why-me" className="hover:text-white transition">
               CTR Secrets
             </a>
-            <a href="#contact" className="hover:text-white transition">Contact</a>
-
+            <a href="#contact" className="hover:text-white transition">
+              Contact
+            </a>
           </nav>
 
           <div className="flex items-center gap-2.5">
@@ -320,7 +321,7 @@ export default function App() {
             </button>
             <a
               href={getWhatsappLink(
-                "Hi Anas, I saw your portfolio and want to order a viral thumbnail!",
+                "Hi Anas, I saw your portfolio and want to order a viral thumbnail!"
               )}
               target="_blank"
               rel="noreferrer"
@@ -332,6 +333,7 @@ export default function App() {
           </div>
         </div>
       </header>
+
       {/* Agency-Grade Hero Section */}
       <section className="relative pt-16 pb-12 px-4 sm:px-6 max-w-7xl mx-auto text-center">
         <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#FF0033]/15 to-[#F59E0B]/15 border border-[#FF0033]/30 text-xs font-bold text-rose-200 mb-7 shadow-lg">
@@ -356,7 +358,7 @@ export default function App() {
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
           <a
             href={getWhatsappLink(
-              "Hi Anas! I want to boost my channel CTR with custom thumbnails.",
+              "Hi Anas! I want to boost my channel CTR with custom thumbnails."
             )}
             target="_blank"
             rel="noreferrer"
@@ -496,61 +498,91 @@ export default function App() {
           ))}
         </div>
       </section>
-      {/* CTR Secrets / Value Grid */}
-      <section id="why-me" className="py-14 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <span className="text-xs font-black uppercase tracking-widest text-[#F59E0B]">
-            The Formula Behind Viral Clicks
+
+            {/* Before / After Interactive Comparison Slider */}
+      <section className="py-14 px-4 sm:px-6 max-w-5xl mx-auto">
+        <div className="text-center mb-8">
+          <span className="text-xs font-black uppercase tracking-widest text-[#FF0033]">
+            The Magic of Color Grading & Manipulation
           </span>
           <h2 className="text-3xl sm:text-4xl font-black mt-1">
-            Why Top Channels Choose Anas Sayed
+            Raw Frame vs. Viral Thumbnail
           </h2>
+          <p className="text-zinc-400 text-xs sm:text-sm mt-2">
+            Slide left and right to compare a standard flat frame vs. Anas Sayed's viral grade
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              icon: <Zap className="w-6 h-6 text-[#FF0033]" />,
-              title: "0.3-Second Hook Psychology",
-              desc: "Viewers scroll fast. Every thumbnail is engineered with strong focal contrast and emotional expressions that stop the thumb instantly.",
-            },
-            {
-              icon: <TrendingUp className="w-6 h-6 text-[#F59E0B]" />,
-              title: "Curiosity Gap Storytelling",
-              desc: "I never repeat the video title on the thumbnail—instead, I create a visual mystery that forces viewers to click to find the answer.",
-            },
-            {
-              icon: <Award className="w-6 h-6 text-[#FF0033]" />,
-              title: "Mobile-First Readability",
-              desc: "Over 75% of YouTube views happen on phones. Every element, face, and text is tested at small mobile sizes for crystal clarity.",
-            },
-          ].map((feat, idx) => (
-            <div
-              key={idx}
-              className="p-7 rounded-3xl bg-gradient-to-b from-white/[0.06] to-transparent border border-white/10 backdrop-blur-xl hover:border-[#FF0033]/40 transition"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-5">
-                {feat.icon}
-              </div>
-              <h3 className="text-xl font-black text-white">{feat.title}</h3>
-              <p className="text-zinc-400 text-sm mt-2.5 leading-relaxed">
-                {feat.desc}
-              </p>
+        <div
+          className="relative aspect-video rounded-3xl overflow-hidden border border-white/15 shadow-2xl select-none group cursor-ew-resize"
+          onMouseMove={(e) => {
+            if (e.buttons !== 1) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+            setSliderPos((x / rect.width) * 100);
+          }}
+          onTouchMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width));
+            setSliderPos((x / rect.width) * 100);
+          }}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+            setSliderPos((x / rect.width) * 100);
+          }}
+        >
+          {/* AFTER Image (Full Background) */}
+          <img
+            src="/thumbnails/eldaheeh.jpg"
+            alt="After Viral Grade"
+            className="w-full h-full object-cover pointer-events-none"
+          />
+          <span className="absolute top-4 right-4 px-3.5 py-1.5 rounded-full bg-[#FF0033] text-white text-[11px] font-black tracking-wider shadow-lg">
+            AFTER (13.2% CTR)
+          </span>
+
+          {/* BEFORE Image (Clipped Overlay) */}
+          <div
+            className="absolute inset-0 overflow-hidden pointer-events-none"
+            style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
+          >
+            <img
+              src="/thumbnails/eldaheeh_before.jpg"
+              alt="Before Raw Frame"
+              className="w-full h-full object-cover pointer-events-none"
+            />
+            <span className="absolute top-4 left-4 px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md text-zinc-200 border border-white/15 text-[11px] font-black tracking-wider">
+              BEFORE (RAW)
+            </span>
+          </div>
+
+          {/* Vertical Divider Line & Handle */}
+          <div
+            className="absolute inset-y-0 w-[3px] bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)] pointer-events-none"
+            style={{ left: `${sliderPos}%` }}
+          >
+            <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#FF0033] border-2 border-white text-white flex items-center justify-center shadow-xl">
+              <MoveHorizontal className="w-5 h-5" />
             </div>
-          ))}
+          </div>
         </div>
       </section>
-      <div className="text-center mb-10">
-        <span className="text-xs font-black uppercase tracking-widest text-[#F59E0B]">
-          Creator Feedback
-        </span>
-        <h2 className="text-3xl sm:text-4xl font-black mt-1">
-          What Creators Say About My Work
-        </h2>
-      </div>
+
+
+      
 
       {/* Creator Testimonials */}
       <section className="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-10">
+          <span className="text-xs font-black uppercase tracking-widest text-[#F59E0B]">
+            Creator Feedback
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black mt-1">
+            What Creators Say About My Work
+          </h2>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
@@ -609,7 +641,6 @@ export default function App() {
               title: "Send Video Idea",
               desc: "Message me on WhatsApp with your video title, topic, and any raw photos.",
             },
-
             {
               step: "02",
               title: "CTR Concept & Hook",
@@ -696,7 +727,6 @@ export default function App() {
           ))}
         </div>
       </section>
-
       {/* Ultimate Final CTA Banner */}
       <section className="py-16 px-4 sm:px-6 max-w-6xl mx-auto">
         <div className="relative rounded-[32px] p-8 sm:p-14 overflow-hidden border border-[#FF0033]/40 bg-gradient-to-br from-[#FF0033]/20 via-[#121217] to-[#F59E0B]/15 text-center shadow-2xl">
@@ -712,7 +742,7 @@ export default function App() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <a
                 href={getWhatsappLink(
-                  "Hi Anas! I'm ready to order my viral thumbnail now.",
+                  "Hi Anas! I'm ready to order my viral thumbnail now."
                 )}
                 target="_blank"
                 rel="noreferrer"
@@ -759,7 +789,7 @@ export default function App() {
 
             <a
               href={getWhatsappLink(
-                "Hi Anas, I want to work with you on my YouTube thumbnails!",
+                "Hi Anas, I want to work with you on my YouTube thumbnails!"
               )}
               target="_blank"
               rel="noreferrer"
@@ -771,10 +801,11 @@ export default function App() {
           </div>
         </div>
       </footer>
+
       {/* Floating WhatsApp Quick Action Button */}
       <a
         href={getWhatsappLink(
-          "Hi Anas! I'm on your portfolio and want to order a thumbnail.",
+          "Hi Anas! I'm on your portfolio and want to order a thumbnail."
         )}
         target="_blank"
         rel="noreferrer"
@@ -784,7 +815,6 @@ export default function App() {
         <span className="text-xs sm:text-sm">Chat with Me</span>
       </a>
 
-      {/* YouTube Feed Preview Lightbox Modal */}
       {/* YouTube Feed Preview Lightbox Modal */}
       {previewItem && (
         <div
@@ -851,7 +881,7 @@ export default function App() {
 
                 <a
                   href={getWhatsappLink(
-                    `Hi Anas! I want a thumbnail similar to "${previewItem.title}".`,
+                    `Hi Anas! I want a thumbnail similar to "${previewItem.title}".`
                   )}
                   target="_blank"
                   rel="noreferrer"
@@ -865,7 +895,6 @@ export default function App() {
           </div>
         </div>
       )}
-
       {/* Admin Dashboard Modal */}
       {isAdminOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-start justify-center p-4 overflow-y-auto">
@@ -913,7 +942,7 @@ export default function App() {
                   onChange={(e) => setPasswordInput(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-sm focus:border-[#FF0033] outline-none"
                 />
-                                {loginError && (
+                {loginError && (
                   <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold text-center">
                     ⚠️ كلمة المرور غير صحيحة
                   </div>
@@ -928,7 +957,7 @@ export default function App() {
               </form>
             ) : (
               <div className="mt-6 space-y-8">
-                                {editingItem && (
+                {editingItem && (
                   <form
                     onSubmit={handleUpdateThumbnail}
                     className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-4"
@@ -950,26 +979,47 @@ export default function App() {
                       <input
                         type="text"
                         value={editingItem.title}
-                        onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                        onChange={(e) =>
+                          setEditingItem({
+                            ...editingItem,
+                            title: e.target.value,
+                          })
+                        }
                         className="px-4 py-2.5 rounded-xl bg-[#121217] border border-white/10 text-sm outline-none focus:border-[#F59E0B]"
                         required
                       />
                       <select
                         value={editingItem.category}
-                        onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                        onChange={(e) =>
+                          setEditingItem({
+                            ...editingItem,
+                            category: e.target.value,
+                          })
+                        }
                         className="px-4 py-2.5 rounded-xl bg-[#121217] border border-white/10 text-sm outline-none focus:border-[#F59E0B]"
                       >
                         {CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
                         ))}
                       </select>
                       <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#121217] border border-dashed border-white/25 hover:border-[#F59E0B] cursor-pointer text-xs text-zinc-300">
                         <Upload className="w-4 h-4 text-[#F59E0B]" />
-                        <span>{editingItem.newFile ? editingItem.newFile.name : "تغيير الصورة (اختياري)"}</span>
+                        <span>
+                          {editingItem.newFile
+                            ? editingItem.newFile.name
+                            : "تغيير الصورة (اختياري)"}
+                        </span>
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => setEditingItem({ ...editingItem, newFile: e.target.files?.[0] || null })}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              newFile: e.target.files?.[0] || null,
+                            })
+                          }
                           className="hidden"
                         />
                       </label>
@@ -983,7 +1033,6 @@ export default function App() {
                     </button>
                   </form>
                 )}
-
                 {/* Add New Form */}
                 <form
                   onSubmit={handleAddThumbnail}
@@ -1061,9 +1110,11 @@ export default function App() {
                             {item.category}
                           </p>
                         </div>
-                                                <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
-                            onClick={() => setEditingItem({ ...item, newFile: null })}
+                            onClick={() =>
+                              setEditingItem({ ...item, newFile: null })
+                            }
                             className="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400"
                             title="Edit"
                           >
@@ -1077,8 +1128,6 @@ export default function App() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-
-  
                       </div>
                     ))}
                   </div>
